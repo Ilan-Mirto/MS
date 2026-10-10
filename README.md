@@ -2,8 +2,9 @@
 
 ## Serveur Flask avec Socket.IO
 
-Cette application utilise Flask et Flask-SocketIO pour établir une connexion
-en temps réel entre le navigateur et le serveur Python.
+Cette application utilise Flask et Flask-SocketIO pour discuter en temps réel
+entre plusieurs navigateurs. Chaque visiteur choisit un nom et ses messages
+sont diffusés aux autres personnes connectées au salon.
 
 ```sh
 python3 -m venv .venv
@@ -12,10 +13,10 @@ python -m pip install -r requirements.txt
 python server.py
 ```
 
-Ouvre ensuite [http://localhost:5000](http://localhost:5000). La page indique
-si le navigateur est connecté au serveur. Le client Socket.IO du navigateur
-est chargé depuis le CDN Socket.IO. Le port local peut être changé avec la
-variable d'environnement `PORT`.
+Ouvre ensuite [http://localhost:5000](http://localhost:5000). Les messages ne
+sont pas enregistrés: ils disparaissent lorsque la page ou le serveur est
+redémarré. Le client Socket.IO du navigateur est chargé depuis le CDN Socket.IO.
+Le port local peut être changé avec la variable d'environnement `PORT`.
 
 ## Accès depuis un autre réseau
 
