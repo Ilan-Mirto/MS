@@ -2,11 +2,13 @@ const socket = io();
 const connection = document.getElementById('connection');
 const connectionLabel = document.getElementById('connection-label');
 const messages = document.getElementById('messages');
+const imageInput = document.getElementById('image-input');
 const emptyState = document.getElementById('empty-state');
 const form = document.getElementById('message-form');
 const displayName = document.getElementById('display-name');
 const messageInput = document.getElementById('message-input');
 const sendButton = document.getElementById('send-button');
+const sendImgButton = document.getElementById('send-img-button');
 
 // Restaure le nom saisi précédemment et le sauvegarde à chaque modification.
 displayName.value = localStorage.getItem('chat-display-name') || '';
@@ -71,4 +73,45 @@ form.addEventListener('submit', (event) => {
   });
   messageInput.value = '';
   messageInput.focus();
+});
+
+// Intercepte le clic sur le bouton d'envoi d'image pour transmettre l'image via Socket.IO.
+sendImgButton.addEventListener('click', () => {
+  const imageUrl = prompt('Entrez l\'URL de l\'image :');
+  if (!imageUrl || !socket.connected) return;
+
+  socket.emit('send_image', {
+    name: displayName.value.trim() || 'Anonyme',
+    image_url: imageUrl.trim()
+  });
+});
+
+// Affiche chaque image reçue du serveur dans la liste de discussion.
+socket.on('chat_image', (message) => {
+  emptyState.remove();
+
+  const item = document.createElement('li');
+  item.className = 'message';
+  item.classList.toggle('own', message.sender_id === socket.id);
+
+  const metadata = document.createElement('div');
+  metadata.className = 'message-meta';
+  const author = document.createElement('strong');
+  author.textContent = message.name;
+  const time = document.createElement('time');
+  time.dateTime = message.timestamp;
+  time.textContent = new Date(message.timestamp).toLocaleTimeString([], {
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+  metadata.append(author, time);
+
+  const image = document.createElement('img');
+  image.src = message.image_url;
+  image.alt = 'Image partagée';
+  image.style.maxWidth = '100px';
+  image.style.height = 'auto';
+  item.append(metadata, image);
+  messages.append(item);
+  messages.scrollTop = messages.scrollHeight;
 });
