@@ -12,10 +12,24 @@ python -m pip install -r requirements.txt
 python server.py
 ```
 
-Ouvre ensuite [http://localhost:3000](http://localhost:3000). La page indique
+Ouvre ensuite [http://localhost:5000](http://localhost:5000). La page indique
 si le navigateur est connecté au serveur. Le client Socket.IO du navigateur
-est chargé depuis le CDN Socket.IO. Le port peut être changé avec la variable
-d'environnement `PORT`.
+est chargé depuis le CDN Socket.IO. Le port local peut être changé avec la
+variable d'environnement `PORT`.
+
+## Accès depuis un autre réseau
+
+La configuration `render.yaml` permet de publier l'application sur Render,
+avec une URL accessible depuis Internet et le support des WebSockets.
+
+1. Pousse le projet sur GitHub.
+2. Dans Render, choisis **New** puis **Blueprint** et sélectionne le dépôt.
+3. Une fois le déploiement terminé, ouvre l'URL `onrender.com` fournie par
+	Render depuis les autres appareils.
+
+Le service gratuit peut se mettre en veille après une période sans activité;
+la première ouverture peut alors prendre un peu plus de temps. Le site sera
+public pour toute personne ayant son URL.
 
 Pour lancer les tests :
 
