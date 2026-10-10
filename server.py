@@ -1,4 +1,5 @@
 import os
+from datetime import datetime, timezone
 
 from flask import Flask, render_template, request
 from flask_socketio import SocketIO
@@ -15,6 +16,32 @@ def handle_connect(_auth=None):
 @socketio.on("disconnect")
 def handle_disconnect(_reason=None):
     print(f"Client déconnecté : {request.sid}")
+
+
+@socketio.on("send_message")
+def handle_send_message(data):
+    if not isinstance(data, dict):
+        return
+
+    name = data.get("name")
+    text = data.get("text")
+    if not isinstance(name, str) or not isinstance(text, str):
+        return
+
+    name = " ".join(name.split())[:24] or "Anonyme"
+    text = text.strip()[:500]
+    if not text:
+        return
+
+    socketio.emit(
+        "chat_message",
+        {
+            "name": name,
+            "text": text,
+            "sender_id": request.sid,
+            "timestamp": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        },
+    )
 
 
 def create_app():
