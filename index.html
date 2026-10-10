@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Socket.IO — installation de base</title>
+  </head>
+  <body>
+    <h1>Socket.IO</h1>
+    <p>État de la connexion : <strong id="status">connexion…</strong></p>
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+      const status = document.getElementById('status');
+      const socket = io();
+
+      socket.on('connect', () => {
+        status.textContent = 'connecté';
+      });
+      socket.on('disconnect', () => {
+        status.textContent = 'déconnecté';
+      });
+    </script>
+  </body>
+</html>
