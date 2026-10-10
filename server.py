@@ -43,6 +43,31 @@ def handle_send_message(data):
         },
     )
 
+@socketio.on("send_image")
+def handle_send_image(data):
+    if not isinstance(data, dict):
+        return
+
+    name = data.get("name")
+    image_url = data.get("image_url")
+    if not isinstance(name, str) or not isinstance(image_url, str):
+        return
+
+    name = " ".join(name.split())[:24] or "Anonyme"
+    image_url = image_url.strip()[:500]
+    if not image_url:
+        return
+
+    socketio.emit(
+        "chat_image",
+        {
+            "name": name,
+            "image_url": image_url,
+            "sender_id": request.sid,
+            "timestamp": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        },
+    )
+
 
 def create_app():
     app = Flask(__name__)
