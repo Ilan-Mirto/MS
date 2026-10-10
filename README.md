@@ -1,21 +1,24 @@
 # MS
 
-## Installation Socket.IO de base
+## Serveur Flask avec Socket.IO
 
-Cette application utilise Socket.IO pour établir une connexion en temps réel
-entre le navigateur et un serveur Node.js.
+Cette application utilise Flask et Flask-SocketIO pour établir une connexion
+en temps réel entre le navigateur et le serveur Python.
 
 ```sh
-npm install
-npm start
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements.txt
+python server.py
 ```
 
 Ouvre ensuite [http://localhost:3000](http://localhost:3000). La page indique
-si le navigateur est connecté au serveur. Le port peut être changé avec la
-variable d'environnement `PORT`.
+si le navigateur est connecté au serveur. Le client Socket.IO du navigateur
+est chargé depuis le CDN Socket.IO. Le port peut être changé avec la variable
+d'environnement `PORT`.
 
-Pour lancer le test de connexion :
+Pour lancer les tests :
 
 ```sh
-npm test
+python -m unittest discover -s test
 ```
