@@ -1,39 +1,68 @@
-# MS
+# Salon général
 
-## Serveur Flask avec Socket.IO
+Application web de discussion publique en temps réel, construite avec Flask et Flask-SocketIO. Les visiteurs peuvent choisir un nom, envoyer des messages texte ou partager une image par URL, et voir les contributions des autres personnes connectées au salon.
 
-Cette application utilise Flask et Flask-SocketIO pour discuter en temps réel
-entre plusieurs navigateurs. Chaque visiteur choisit un nom et ses messages
-sont diffusés aux autres personnes connectées au salon.
+## Fonctionnalités
 
-```sh
-python3 -m venv .venv
+- Interface de chat en français, avec indicateur de connexion.
+- Diffusion en temps réel des messages à tous les clients connectés.
+- Partage d’images à partir d’une URL, via le bouton « Envoyer une image ».
+- Nom d’affichage mémorisé dans le navigateur.
+- Limites côté serveur : nom limité à 24 caractères, message texte et URL d’image à 500 caractères.
+
+Les messages ne sont pas enregistrés : ils ne sont visibles que par les personnes connectées au moment de leur envoi et disparaissent lorsque la page est rechargée ou que le serveur redémarre. Les images ne sont pas téléversées ni stockées par l’application ; les navigateurs chargent l’image depuis l’URL fournie. Le salon est public et ne nécessite pas de compte.
+
+## Prérequis
+
+- Python 3.10 ou supérieur
+- `pip`
+
+Le navigateur charge la bibliothèque cliente Socket.IO depuis un CDN ; une connexion Internet est donc nécessaire pour utiliser le chat.
+
+## Installation et lancement
+
+Depuis la racine du projet :
+
+```bash
+python -m venv .venv
 source .venv/bin/activate
 python -m pip install -r requirements.txt
 python server.py
 ```
+Sous Windows, active l’environnement virtuel avec `.venv\Scripts\activate`.
 
-Ouvre ensuite [http://localhost:5000](http://localhost:5000). Les messages ne
-sont pas enregistrés: ils disparaissent lorsque la page ou le serveur est
-redémarré. Le client Socket.IO du navigateur est chargé depuis le CDN Socket.IO.
-Le port local peut être changé avec la variable d'environnement `PORT`.
+Ouvre ensuite [http://localhost:5000](http://localhost:5000). Le serveur écoute sur le port `5000` par défaut ; la variable d’environnement `PORT` permet d’en choisir un autre.
 
-## Accès depuis un autre réseau
+## Tests
 
-La configuration `render.yaml` permet de publier l'application sur Render,
-avec une URL accessible depuis Internet et le support des WebSockets.
+```bash
+python -m unittest discover -s test -v
+```
 
-1. Pousse le projet sur GitHub.
-2. Dans Render, choisis **New** puis **Blueprint** et sélectionne le dépôt.
-3. Une fois le déploiement terminé, ouvre l'URL `onrender.com` fournie par
-	Render depuis les autres appareils.
+Les tests vérifient notamment le chargement de la page et des ressources statiques, la connexion Socket.IO et la diffusion des messages texte entre clients.
 
-Le service gratuit peut se mettre en veille après une période sans activité;
-la première ouverture peut alors prendre un peu plus de temps. Le site sera
-public pour toute personne ayant son URL.
+## Déploiement sur Render
 
-Pour lancer les tests :
+Le fichier `render.yaml` décrit le service web Render. Il installe les dépendances avec `pip install -r requirements.txt` et démarre l’application avec :
 
-```sh
-python -m unittest discover -s test
+```bash
+gunicorn --bind 0.0.0.0:$PORT --worker-class gthread --workers 1 --threads 100 server:app
+```
+
+La configuration utilise un seul worker : les diffusions Socket.IO reposent sur la mémoire du processus et aucun stockage partagé ou système de messages externe n’est configuré.
+
+## Structure du projet
+
+```text
+.
+├── server.py             # Application Flask et événements Socket.IO
+├── templates/
+│   └── index.html        # Page du salon
+├── static/
+│   ├── css/chat.css      # Styles de l’interface
+│   └── js/chat.js        # Connexion et interactions du chat
+├── test/
+│   └── test_server.py    # Tests du serveur
+├── requirements.txt      # Dépendances Python
+└── render.yaml           # Configuration de déploiement Render
 ```
