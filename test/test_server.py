@@ -26,6 +26,7 @@ class ServerTest(unittest.TestCase):
         self.assertIn(b"Salon g\xc3\xa9n\xc3\xa9ral", response.data)
         self.assertIn(b"/static/css/chat.css", response.data)
         self.assertIn(b"/static/js/chat.js", response.data)
+        self.assertIn(b'href="/messages"', response.data)
 
         first_client = socketio.test_client(self.app, flask_test_client=self.client)
         second_client = socketio.test_client(self.app, flask_test_client=self.client)
@@ -82,6 +83,25 @@ class ServerTest(unittest.TestCase):
         self.assertIn(b"socket.on('chat_message'", script.data)
         stylesheet.close()
         script.close()
+
+    def test_message_history_route_displays_saved_messages(self):
+        socket_client = socketio.test_client(
+            self.app, flask_test_client=self.client
+        )
+        socket_client.emit(
+            "send_message", {"name": "Alice", "text": "Message archivé"}
+        )
+        socket_client.emit(
+            "send_image",
+            {"name": "Bob", "image_url": "https://example.com/photo.jpg"},
+        )
+
+        response = self.client.get("/messages")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"Message archiv\xc3\xa9", response.data)
+        self.assertIn(b"https://example.com/photo.jpg", response.data)
+        socket_client.disconnect()
 
 
 if __name__ == "__main__":

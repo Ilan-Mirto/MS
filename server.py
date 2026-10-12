@@ -2,8 +2,9 @@ import os
 import sqlite3
 from datetime import datetime, timezone
 
-from flask import Flask, current_app, render_template, request
+from flask import Flask, current_app, request
 from flask_socketio import SocketIO
+from views import load_messages, views as views_blueprint
 
 
 socketio = SocketIO(async_mode="threading")
@@ -28,36 +29,13 @@ def initialize_database(app):
 def save_message(kind, name, content, timestamp):
     connection = sqlite3.connect(current_app.config["DATABASE"])
     try:
-        connection.execute(
-            "INSERT INTO messages (kind, name, content, timestamp) VALUES (?, ?, ?, ?)",
+        connection.execute( 
+            "INSERT INTO messages (kind, name, content, timestamp) VALUES (?, ?,?, ?)",
             (kind, name, content, timestamp),
         )
         connection.commit()
     finally:
         connection.close()
-
-
-def load_messages():
-    connection = sqlite3.connect(current_app.config["DATABASE"])
-    try:
-        rows = connection.execute(
-            "SELECT kind, name, content, timestamp FROM messages ORDER BY id"
-        ).fetchall()
-    finally:
-        connection.close()
-
-    messages = []
-    for kind, name, content, timestamp in rows:
-        content_key = "text" if kind == "text" else "image_url"
-        messages.append(
-            {
-                "type": kind,
-                "name": name,
-                content_key: content,
-                "timestamp": timestamp,
-            }
-        )
-    return messages
 
 
 @socketio.on("connect")
@@ -98,6 +76,7 @@ def handle_send_message(data):
         },
     )
 
+
 @socketio.on("send_image")
 def handle_send_image(data):
     if not isinstance(data, dict):
@@ -136,10 +115,7 @@ def create_app(test_config=None):
 
     initialize_database(app)
 
-    @app.get("/")
-    def index():
-        return render_template("index.html")
-
+    app.register_blueprint(views_blueprint)
     socketio.init_app(app)
     return app
 

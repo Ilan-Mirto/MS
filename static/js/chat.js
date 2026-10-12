@@ -65,11 +65,6 @@ function renderMessage(message) {
   messages.scrollTop = messages.scrollHeight;
 }
 
-socket.on('chat_history', (history) => {
-  messages.replaceChildren(emptyState);
-  history.forEach(renderMessage);
-});
-
 socket.on('chat_message', (message) => {
   renderMessage(message);
 });

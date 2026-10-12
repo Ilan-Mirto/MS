@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title %}Historique - Salon général{% endblock %}
+
+{% block content %}
+  <main class="chat">
+    <header class="chat-header">
+      <div>
+        <p class="eyebrow">ARCHIVES</p>
+        <h1>Historique du salon</h1>
+      </div>
+      <a href="{{ url_for('views.index') }}">Retour au salon</a>
+    </header>
+
+    <ol class="messages" aria-label="Historique des messages">
+      {% for message in messages %}
+        <li class="message">
+          <div class="message-meta">
+            <strong>{{ message.name }}</strong>
+            <time datetime="{{ message.timestamp }}">{{ message.timestamp }}</time>
+          </div>
+          {% if message.type == "text" %}
+            <p>{{ message.text }}</p>
+          {% else %}
+            <img src="{{ message.image_url }}" alt="Illustration partagée" style="max-width: 100px; height: auto">
+          {% endif %}
+        </li>
+      {% else %}
+        <li class="empty-state">
+          <strong>Aucun message enregistré.</strong>
+          <span>Les messages envoyés dans le salon apparaîtront ici.</span>
+        </li>
+      {% endfor %}
+    </ol>
+  </main>
+{% endblock %}
