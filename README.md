@@ -1,17 +1,19 @@
 # Salon général
 
-Application web de discussion publique en temps réel, construite avec Flask et Flask-SocketIO. Les visiteurs peuvent choisir un nom, envoyer des messages texte ou partager une image par URL, et voir les contributions des autres personnes connectées au salon.
+Application web de discussion publique en temps réel, construite avec Flask et Flask-SocketIO. Les utilisateurs créent leur compte ou se connectent avec leur prénom, leur nom et un mot de passe. Ils peuvent ensuite envoyer des messages texte ou partager une image par URL, et voir les contributions des autres personnes connectées au salon.
 
 ## Fonctionnalités
 
 - Interface de chat en français, avec indicateur de connexion.
+- Création automatique d'un compte à la première connexion ; mots de passe stockés sous forme hachée.
+- Session obligatoire pour accéder au salon, à son historique public et aux événements Socket.IO.
 - Diffusion en temps réel des messages à tous les clients connectés.
-- Historique des messages texte et des URLs d’images conservé dans une base SQLite et rechargé à la connexion.
+- Historique public des messages texte et des URLs d’images conservé dans une base SQLite et rechargé à la connexion.
 - Partage d’images à partir d’une URL, via le bouton « Envoyer une image ».
-- Nom d’affichage mémorisé dans le navigateur.
-- Limites côté serveur : nom limité à 24 caractères, message texte et URL d’image à 500 caractères.
+- Annonces de connexion discrètes indiquant le nom complet du nouvel utilisateur.
+- Limites côté serveur : prénom et nom limités à 40 caractères, message texte et URL d’image à 500 caractères.
 
-Les messages sont enregistrés dans `instance/chat.db` par défaut. Définis `CHAT_DATABASE` pour choisir un autre chemin. Les images ne sont pas téléversées ni stockées par l’application ; seule leur URL est conservée, et les navigateurs chargent l’image depuis cette adresse. Le salon est public et ne nécessite pas de compte.
+Les comptes et messages sont enregistrés dans `instance/chat.db` par défaut. Définis `CHAT_DATABASE` pour choisir un autre chemin. En déploiement, définis aussi `CHAT_SECRET_KEY` avec une valeur secrète persistante pour conserver les sessions et protéger leur signature. Les images ne sont pas téléversées ni stockées par l’application ; seule leur URL est conservée, et les navigateurs chargent l’image depuis cette adresse. Le salon et son historique restent publics pour les utilisateurs connectés.
 
 ## Prérequis
 

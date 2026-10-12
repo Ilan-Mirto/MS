@@ -8,7 +8,14 @@
       <div class="brand-mark" aria-hidden="true">SG</div>
       <div>
         <p class="eyebrow">DISCUSSION PUBLIQUE</p>
-        <h1>Salon général <a href="{{ url_for('views.message_history') }}">voir les anciens messages</a></h1>
+        <h1>Salon général</h1>
+      </div>
+      <div class="account-tools">
+        <span>{{ user.full_name }}</span>
+        <form action="{{ url_for('views.logout') }}" method="post">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <button class="logout-button" type="submit">Déconnexion</button>
+        </form>
       </div>
       <output class="connection" id="connection" aria-live="polite">
         <span class="connection-dot" aria-hidden="true"></span>
@@ -16,7 +23,7 @@
       </output>
     </header>
 
-    <ol class="messages" id="messages" aria-label="Messages du salon" aria-live="polite">
+    <ol class="messages" id="messages" data-user-id="{{ user.id }}" aria-label="Messages du salon" aria-live="polite">
       <li class="empty-state" id="empty-state">
         <strong>Le salon est calme pour le moment.</strong>
         <span>Écris le premier message.</span>
@@ -24,14 +31,10 @@
     </ol>
 
     <form class="composer" id="message-form">
-      <div class="name-field">
-        <label for="display-name">Ton nom</label>
-        <input id="display-name" name="name" maxlength="24" autocomplete="nickname" placeholder="Anonyme">
-      </div>
       <div class="send-row">
         <input id="message-input" name="message" maxlength="500" autocomplete="off" placeholder="Écrire un message…" aria-label="Message" required>
         <button id="send-button" type="submit" disabled>Envoyer</button>
-        <button id="send-img-button" type="button">Envoyer une image</button>
+        <button id="send-img-button" type="button" disabled>Envoyer une image</button>
       </div>
     </form>
   </main>

@@ -1,8 +1,10 @@
 import os
+import sqlite3
 import tempfile
 import unittest
 
 from server import create_app, socketio
+from werkzeug.security import generate_password_hash
 
 
 class ServerTest(unittest.TestCase):
@@ -20,31 +22,68 @@ class ServerTest(unittest.TestCase):
     def tearDown(self):
         self.temp_dir.cleanup()
 
+    def authenticate(self, client, first_name, last_name, password):
+        client.get("/")
+        with client.session_transaction() as browser_session:
+            csrf_token = browser_session["csrf_token"]
+        return client.post(
+            "/",
+            data={
+                "csrf_token": csrf_token,
+                "first_name": first_name,
+                "last_name": last_name,
+                "password": password,
+            },
+        )
+
     def test_serves_page_and_accepts_socket_io_connection(self):
-        response = self.client.get("/")
+        first_browser = self.app.test_client()
+        self.authenticate(first_browser, "Alice", "Martin", "motdepasse-a")
+        response = first_browser.get("/")
         self.assertEqual(response.status_code, 200)
         self.assertIn(b"Salon g\xc3\xa9n\xc3\xa9ral", response.data)
         self.assertIn(b"/static/css/chat.css", response.data)
         self.assertIn(b"/static/js/chat.js", response.data)
         self.assertIn(b'href="/messages"', response.data)
+        with first_browser.session_transaction() as browser_session:
+            first_user_id = browser_session["user_id"]
 
-        first_client = socketio.test_client(self.app, flask_test_client=self.client)
-        second_client = socketio.test_client(self.app, flask_test_client=self.client)
+        second_browser = self.app.test_client()
+        self.authenticate(second_browser, "Bob", "Durand", "motdepasse-b")
+        first_client = socketio.test_client(
+            self.app, flask_test_client=first_browser
+        )
         self.assertTrue(first_client.is_connected())
+        self.assertEqual(first_client.get_received()[0]["name"], "chat_history")
+        second_client = socketio.test_client(
+            self.app, flask_test_client=second_browser
+        )
         self.assertTrue(second_client.is_connected())
-        first_client.get_received()
-        second_client.get_received()
+        self.assertEqual(second_client.get_received()[0]["name"], "chat_history")
 
-        first_client.emit("send_message", {"name": "Alice", "text": "Bonjour !"})
+        connection_notice = first_client.get_received()
+        self.assertEqual(connection_notice[0]["name"], "system_message")
+        self.assertEqual(
+            connection_notice[0]["args"][0]["text"],
+            "Bob Durand vient de rejoindre le salon.",
+        )
+
+        first_client.emit(
+            "send_message", {"name": "Usurpateur", "text": "Bonjour !"}
+        )
         first_client.emit(
             "send_image",
-            {"name": "Alice", "image_url": "https://example.com/photo.jpg"},
+            {"image_url": "https://example.com/photo.jpg"},
         )
         first_messages = first_client.get_received()
         second_messages = second_client.get_received()
 
         self.assertEqual(first_messages[0]["name"], "chat_message")
-        self.assertEqual(first_messages[0]["args"][0]["name"], "Alice")
+        self.assertEqual(first_messages[0]["args"][0]["name"], "Alice Martin")
+        self.assertEqual(
+            first_messages[0]["args"][0]["user_id"],
+            first_user_id,
+        )
         self.assertEqual(first_messages[0]["args"][0]["text"], "Bonjour !")
         self.assertEqual(second_messages[0]["name"], "chat_message")
         self.assertEqual(second_messages[0]["args"][0]["text"], "Bonjour !")
@@ -60,18 +99,94 @@ class ServerTest(unittest.TestCase):
         restarted_app = create_app(
             {"TESTING": True, "DATABASE": self.database_path}
         )
+        restarted_browser = restarted_app.test_client()
+        self.authenticate(restarted_browser, "Alice", "Martin", "motdepasse-a")
         restarted_client = socketio.test_client(
-            restarted_app, flask_test_client=restarted_app.test_client()
+            restarted_app, flask_test_client=restarted_browser
         )
         history_events = restarted_client.get_received()
         self.assertEqual(history_events[0]["name"], "chat_history")
         history = history_events[0]["args"][0]
         self.assertEqual(len(history), 2)
         self.assertEqual(history[0]["text"], "Bonjour !")
+        self.assertEqual(history[0]["name"], "Alice Martin")
         self.assertEqual(
             history[1]["image_url"], "https://example.com/photo.jpg"
         )
         restarted_client.disconnect()
+
+    def test_creates_account_and_requires_its_password_on_reconnect(self):
+        first_client = self.app.test_client()
+        response = self.authenticate(
+            first_client, "Élodie", "Martin", "mon-secret-123"
+        )
+        self.assertEqual(response.status_code, 302)
+        with first_client.session_transaction() as browser_session:
+            first_user_id = browser_session["user_id"]
+
+        second_client = self.app.test_client()
+        self.authenticate(second_client, "élodie", "martin", "mauvais-secret")
+        with second_client.session_transaction() as browser_session:
+            self.assertNotIn("user_id", browser_session)
+
+        self.authenticate(second_client, "élodie", "martin", "mon-secret-123")
+        with second_client.session_transaction() as browser_session:
+            self.assertEqual(browser_session["user_id"], first_user_id)
+            self.assertEqual(browser_session["user_name"], "Élodie Martin")
+
+    def test_migrates_legacy_schema_without_losing_account_or_history(self):
+        legacy_database = os.path.join(self.temp_dir.name, "legacy.db")
+        with sqlite3.connect(legacy_database) as connection:
+            connection.execute(
+                """CREATE TABLE users (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    first_name TEXT NOT NULL COLLATE NOCASE,
+                    last_name TEXT NOT NULL COLLATE NOCASE,
+                    password_hash TEXT NOT NULL,
+                    UNIQUE (first_name, last_name)
+                )"""
+            )
+            connection.execute(
+                """CREATE TABLE messages (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    kind TEXT NOT NULL,
+                    name TEXT NOT NULL,
+                    content TEXT NOT NULL,
+                    timestamp TEXT NOT NULL
+                )"""
+            )
+            connection.execute(
+                "INSERT INTO users (first_name, last_name, password_hash) "
+                "VALUES (?, ?, ?)",
+                ("Élodie", "Martin", generate_password_hash("motdepasse-a")),
+            )
+            connection.execute(
+                "INSERT INTO messages (kind, name, content, timestamp) "
+                "VALUES (?, ?, ?, ?)",
+                ("text", "Élodie Martin", "Ancien message", "2026-01-01T10:00:00+00:00"),
+            )
+
+        migrated_app = create_app(
+            {"TESTING": True, "DATABASE": legacy_database}
+        )
+        browser = migrated_app.test_client()
+        self.authenticate(browser, "élodie", "martin", "motdepasse-a")
+        with browser.session_transaction() as browser_session:
+            self.assertEqual(browser_session["user_id"], 1)
+
+        socket_client = socketio.test_client(
+            migrated_app, flask_test_client=browser
+        )
+        history = socket_client.get_received()[0]["args"][0]
+        self.assertEqual(history[0]["text"], "Ancien message")
+        self.assertEqual(history[0]["name"], "Élodie Martin")
+        socket_client.disconnect()
+
+    def test_rejects_socket_connections_without_an_authenticated_session(self):
+        unauthenticated_client = socketio.test_client(
+            self.app, flask_test_client=self.client
+        )
+        self.assertFalse(unauthenticated_client.is_connected())
 
     def test_serves_chat_assets(self):
         stylesheet = self.client.get("/static/css/chat.css")
@@ -80,37 +195,45 @@ class ServerTest(unittest.TestCase):
         self.assertEqual(stylesheet.status_code, 200)
         self.assertIn(b".chat {", stylesheet.data)
         self.assertEqual(script.status_code, 200)
-        self.assertIn(b"socket.on('chat_message'", script.data)
+        self.assertIn(b"socket.on('chat_history'", script.data)
+        self.assertIn(b"socket.on('system_message'", script.data)
         stylesheet.close()
         script.close()
 
     def test_notifies_connected_clients_when_a_user_connects(self):
-        first_client = socketio.test_client(self.app, flask_test_client=self.client)
+        first_browser = self.app.test_client()
+        second_browser = self.app.test_client()
+        self.authenticate(first_browser, "Alice", "Martin", "motdepasse-a")
+        self.authenticate(second_browser, "Bob", "Durand", "motdepasse-b")
+        first_client = socketio.test_client(
+            self.app, flask_test_client=first_browser
+        )
         first_client.get_received()
-
-        second_client = socketio.test_client(self.app, flask_test_client=self.client)
+        second_client = socketio.test_client(
+            self.app, flask_test_client=second_browser
+        )
 
         received = first_client.get_received()
         self.assertEqual(len(received), 1)
-        self.assertEqual(received[0]["name"], "chat_message")
-        self.assertEqual(received[0]["args"][0]["name"], "Serveur")
+        self.assertEqual(received[0]["name"], "system_message")
         self.assertEqual(
             received[0]["args"][0]["text"],
-            "Un utilisateur vient de se connecter.",
+            "Bob Durand vient de rejoindre le salon.",
         )
         first_client.disconnect()
         second_client.disconnect()
 
     def test_message_history_route_displays_saved_messages(self):
+        self.authenticate(self.client, "Alice", "Martin", "motdepasse-a")
         socket_client = socketio.test_client(
             self.app, flask_test_client=self.client
         )
         socket_client.emit(
-            "send_message", {"name": "Alice", "text": "Message archivé"}
+            "send_message", {"text": "Message archivé"}
         )
         socket_client.emit(
             "send_image",
-            {"name": "Bob", "image_url": "https://example.com/photo.jpg"},
+            {"image_url": "https://example.com/photo.jpg"},
         )
 
         response = self.client.get("/messages")
