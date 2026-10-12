@@ -30,13 +30,10 @@ socket.on('disconnect', () => {
   sendButton.disabled = true;
 });
 
-// Affiche chaque message reçu du serveur dans la liste de discussion.
-socket.on('chat_message', (message) => {
+function renderMessage(message) {
   emptyState.remove();
-
   const item = document.createElement('li');
   item.className = 'message';
-  // La classe « own » permet de distinguer visuellement ses propres messages.
   item.classList.toggle('own', message.sender_id === socket.id);
 
   const metadata = document.createElement('div');
@@ -51,12 +48,30 @@ socket.on('chat_message', (message) => {
   });
   metadata.append(author, time);
 
-  const text = document.createElement('p');
-  // textContent affiche le texte sans interpréter d'éventuelles balises HTML.
-  text.textContent = message.text;
-  item.append(metadata, text);
+  if (message.text !== undefined) {
+    const text = document.createElement('p');
+    text.textContent = message.text;
+    item.append(metadata, text);
+  } else {
+    const image = document.createElement('img');
+    image.src = message.image_url;
+    image.alt = 'Image partagée';
+    image.style.maxWidth = '100px';
+    image.style.height = 'auto';
+    item.append(metadata, image);
+  }
+
   messages.append(item);
   messages.scrollTop = messages.scrollHeight;
+}
+
+socket.on('chat_history', (history) => {
+  messages.replaceChildren(emptyState);
+  history.forEach(renderMessage);
+});
+
+socket.on('chat_message', (message) => {
+  renderMessage(message);
 });
 
 // Intercepte l'envoi du formulaire pour transmettre le message via Socket.IO.
@@ -86,32 +101,6 @@ sendImgButton.addEventListener('click', () => {
   });
 });
 
-// Affiche chaque image reçue du serveur dans la liste de discussion.
 socket.on('chat_image', (message) => {
-  emptyState.remove();
-
-  const item = document.createElement('li');
-  item.className = 'message';
-  item.classList.toggle('own', message.sender_id === socket.id);
-
-  const metadata = document.createElement('div');
-  metadata.className = 'message-meta';
-  const author = document.createElement('strong');
-  author.textContent = message.name;
-  const time = document.createElement('time');
-  time.dateTime = message.timestamp;
-  time.textContent = new Date(message.timestamp).toLocaleTimeString([], {
-    hour: '2-digit',
-    minute: '2-digit'
-  });
-  metadata.append(author, time);
-
-  const image = document.createElement('img');
-  image.src = message.image_url;
-  image.alt = 'Image partagée';
-  image.style.maxWidth = '100px';
-  image.style.height = 'auto';
-  item.append(metadata, image);
-  messages.append(item);
-  messages.scrollTop = messages.scrollHeight;
+  renderMessage(message);
 });

@@ -1,16 +1,69 @@
 import os
+import sqlite3
 from datetime import datetime, timezone
 
-from flask import Flask, render_template, request
+from flask import Flask, current_app, render_template, request
 from flask_socketio import SocketIO
 
 
 socketio = SocketIO(async_mode="threading")
 
 
+def initialize_database(app):
+    database_path = app.config["DATABASE"]
+    os.makedirs(os.path.dirname(os.path.abspath(database_path)), exist_ok=True)
+
+    with sqlite3.connect(database_path) as connection:
+        connection.execute(
+            """CREATE TABLE IF NOT EXISTS messages (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                kind TEXT NOT NULL,
+                name TEXT NOT NULL,
+                content TEXT NOT NULL,
+                timestamp TEXT NOT NULL
+            )"""
+        )
+
+
+def save_message(kind, name, content, timestamp):
+    connection = sqlite3.connect(current_app.config["DATABASE"])
+    try:
+        connection.execute(
+            "INSERT INTO messages (kind, name, content, timestamp) VALUES (?, ?, ?, ?)",
+            (kind, name, content, timestamp),
+        )
+        connection.commit()
+    finally:
+        connection.close()
+
+
+def load_messages():
+    connection = sqlite3.connect(current_app.config["DATABASE"])
+    try:
+        rows = connection.execute(
+            "SELECT kind, name, content, timestamp FROM messages ORDER BY id"
+        ).fetchall()
+    finally:
+        connection.close()
+
+    messages = []
+    for kind, name, content, timestamp in rows:
+        content_key = "text" if kind == "text" else "image_url"
+        messages.append(
+            {
+                "type": kind,
+                "name": name,
+                content_key: content,
+                "timestamp": timestamp,
+            }
+        )
+    return messages
+
+
 @socketio.on("connect")
 def handle_connect(_auth=None):
     print(f"Client connecté : {request.sid}")
+    socketio.emit("chat_history", load_messages(), to=request.sid)
 
 
 @socketio.on("disconnect")
@@ -33,13 +86,15 @@ def handle_send_message(data):
     if not text:
         return
 
+    timestamp = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    save_message("text", name, text, timestamp)
     socketio.emit(
         "chat_message",
         {
             "name": name,
             "text": text,
             "sender_id": request.sid,
-            "timestamp": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+            "timestamp": timestamp,
         },
     )
 
@@ -58,19 +113,28 @@ def handle_send_image(data):
     if not image_url:
         return
 
+    timestamp = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    save_message("image", name, image_url, timestamp)
     socketio.emit(
         "chat_image",
         {
             "name": name,
             "image_url": image_url,
             "sender_id": request.sid,
-            "timestamp": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+            "timestamp": timestamp,
         },
     )
 
 
-def create_app():
+def create_app(test_config=None):
     app = Flask(__name__)
+    app.config["DATABASE"] = os.environ.get(
+        "CHAT_DATABASE", os.path.join(app.instance_path, "chat.db")
+    )
+    if test_config:
+        app.config.update(test_config)
+
+    initialize_database(app)
 
     @app.get("/")
     def index():
