@@ -84,6 +84,23 @@ class ServerTest(unittest.TestCase):
         stylesheet.close()
         script.close()
 
+    def test_notifies_connected_clients_when_a_user_connects(self):
+        first_client = socketio.test_client(self.app, flask_test_client=self.client)
+        first_client.get_received()
+
+        second_client = socketio.test_client(self.app, flask_test_client=self.client)
+
+        received = first_client.get_received()
+        self.assertEqual(len(received), 1)
+        self.assertEqual(received[0]["name"], "chat_message")
+        self.assertEqual(received[0]["args"][0]["name"], "Serveur")
+        self.assertEqual(
+            received[0]["args"][0]["text"],
+            "Un utilisateur vient de se connecter.",
+        )
+        first_client.disconnect()
+        second_client.disconnect()
+
     def test_message_history_route_displays_saved_messages(self):
         socket_client = socketio.test_client(
             self.app, flask_test_client=self.client

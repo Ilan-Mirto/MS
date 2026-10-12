@@ -42,6 +42,15 @@ def save_message(kind, name, content, timestamp):
 def handle_connect(_auth=None):
     print(f"Client connecté : {request.sid}")
     socketio.emit("chat_history", load_messages(), to=request.sid)
+    socketio.emit(
+        "chat_message",
+        {
+            "name": "Serveur",
+            "text": "Un utilisateur vient de se connecter.",
+            "timestamp": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        },
+        skip_sid=request.sid,
+    )
 
 
 @socketio.on("disconnect")
