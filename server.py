@@ -12,6 +12,71 @@ from views import load_messages, views as views_blueprint
 socketio = SocketIO(async_mode="threading")
 
 
+def _migrate_party_schema(connection):
+    party_columns = {
+        column["name"] for column in inspect(connection).get_columns("parties")
+    }
+    if "host_id" not in party_columns:
+        connection.execute(
+            text("ALTER TABLE parties ADD COLUMN host_id INTEGER REFERENCES users(id)")
+        )
+    if "password_hash" not in party_columns:
+        connection.execute(
+            text("ALTER TABLE parties ADD COLUMN password_hash VARCHAR(256)")
+        )
+    if "is_started" not in party_columns:
+        connection.execute(
+            text(
+                "ALTER TABLE parties ADD COLUMN is_started "
+                "BOOLEAN NOT NULL DEFAULT 0"
+            )
+        )
+
+
+
+def _clear_existing_parties(connection):
+    connection.execute(text("DELETE FROM party_bans"))
+    connection.execute(text("DELETE FROM is_connected"))
+    connection.execute(text("DELETE FROM parties"))
+
+
+def _seed_default_game_and_cards(connection):
+    game_exists = connection.execute(
+        text("SELECT 1 FROM games WHERE name = 'ODIN' LIMIT 1")
+    ).first()
+    if not game_exists:
+        connection.execute(
+            text(
+                "INSERT INTO games (name, imgUrl, nb_players_min, nb_players_max) "
+                "VALUES ('ODIN', :image_url, 2, 6)"
+            ),
+            {
+                "image_url": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQLveQe1YezWLVLZZamq0y1rYKTx32P7nnz1QT-3Z1D-m9Y9Cfd22ngf-E&s=10"
+            },
+        )
+
+    cards_exist = connection.execute(text("SELECT 1 FROM cards LIMIT 1")).first()
+    if cards_exist:
+        return
+    game_id = connection.execute(
+        text("SELECT id FROM games WHERE name = 'ODIN' LIMIT 1")
+    ).scalar_one()
+    for color in ["FF9000", "171717", "8B4513", "00CC04", "69DDFF", "FFC0CB"]:
+        for number in ["1", "2", "3", "4", "5", "6", "7", "8", "9"]:
+            connection.execute(
+                text(
+                    "INSERT INTO cards (symbole, symbole_color, bg_color, game_id) "
+                    "VALUES (:symbole, :symbole_color, :bg_color, :game_id)"
+                ),
+                {
+                    "symbole": number,
+                    "symbole_color": "FFFFFF",
+                    "bg_color": color,
+                    "game_id": game_id,
+                },
+            )
+
+
 def initialize_database():
     db.create_all()
 
@@ -53,38 +118,9 @@ def initialize_database():
         if "user_id" not in message_columns:
             connection.execute(text("ALTER TABLE messages ADD COLUMN user_id INTEGER"))
 
-        party_columns = {
-            column["name"] for column in inspect(connection).get_columns("parties")
-        }
-        if "host_id" not in party_columns:
-            connection.execute(
-                text("ALTER TABLE parties ADD COLUMN host_id INTEGER REFERENCES users(id)")
-            )
-
-        # ? Supprimer tous les jeu précédents
-        connection.execute(text("DELETE FROM games"))
-
-        # ? Supprimer toutes les cartes précédentes
-        connection.execute(text("DELETE FROM cards"))
-
-        # ? Ajout des jeux
-        connection.execute(text("INSERT INTO games (name, imgUrl, nb_players_min, nb_players_max) VALUES ('ODIN', 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQLveQe1YezWLVLZZamq0y1rYKTx32P7nnz1QT-3Z1D-m9Y9Cfd22ngf-E&s=10', 2, 6)"))
-
-        # ? Ajout des cartes du jeu ODIN
-                    # Orange, noir, marron, vert, bleu, rose
-        for color in ["FF9000", "171717", "8B4513", "00CC04", "69DDFF", "FFC0CB"]:
-            for number in ["1", "2", "3", "4", "5", "6", "7", "8", "9"]:
-                connection.execute(
-                    text(
-                        "INSERT INTO cards (symbole, symbole_color, bg_color, game_id) "
-                        "VALUES (:symbole, :symbole_color, :bg_color, (SELECT id FROM games WHERE name = 'ODIN'))"
-                    ),
-                    {
-                        "symbole": number,
-                        "symbole_color": "FFFFFF",
-                        "bg_color": color,
-                    },
-                )
+        _migrate_party_schema(connection)
+        _clear_existing_parties(connection)
+        _seed_default_game_and_cards(connection)
 
     USER_NAME_INDEX.create(bind=db.engine, checkfirst=True)
 

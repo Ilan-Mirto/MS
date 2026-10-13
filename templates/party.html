@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+
+{% block title %}{{ party.name }}{% endblock %}
+
+{% block content %}
+<main class="party-room-page">
+    <section class="party-room-intro" aria-labelledby="party-room-title">
+        <p class="eyebrow">SALON DE JEU · PARTIE #{{ party.id }}</p>
+        <h1 id="party-room-title">{{ party.name }}</h1>
+        {% if session_is_hosting %}
+            <p class="party-room-role">Tu es l’organisateur de cette partie.</p>
+        {% else %}
+            <p class="party-room-role">{{ game.name }} · de {{ game.nb_players_min }} à {{ game.nb_players_max }} joueurs</p>
+        {% endif %}
+        {% if party.is_started %}
+            <p class="party-room-state started">Partie lancée</p>
+        {% elif member_count >= game.nb_players_max %}
+            <p class="party-room-state full">Salon complet</p>
+        {% else %}
+            <p class="party-room-state waiting">En attente de joueurs</p>
+        {% endif %}
+    </section>
+
+    <section class="party-room-panel" aria-labelledby="party-room-details-title">
+        <div class="party-room-panel-heading">
+            <span class="party-room-status {% if party.is_started %}started{% endif %}" aria-hidden="true"></span>
+            <h2 id="party-room-details-title">{{ member_count }} / {{ game.nb_players_max }} joueurs</h2>
+        </div>
+
+        <p class="party-room-game">{{ game.name }} · lancement à partir de {{ game.nb_players_min }} joueurs</p>
+
+        <ul class="party-members">
+            {% for member in members %}
+                <li>
+                    <span class="party-member-name">{{ member.first_name }} {{ member.last_name }}{% if member.id == party.host_id %}<span class="host-tag">Hôte</span>{% endif %}</span>
+                    {% if session_is_hosting and member.id != party.host_id and not party.is_started %}
+                        <form method="post" action="{{ url_for('views.kick_party_member', party_id=party.id, user_id=member.id) }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                            <button class="kick-member-button" type="submit" aria-label="Exclure {{ member.first_name }} {{ member.last_name }}">Exclure</button>
+                        </form>
+                    {% endif %}
+                </li>
+            {% else %}
+                <li class="party-members-empty">Aucun joueur dans ce salon.</li>
+            {% endfor %}
+        </ul>
+
+        <div class="party-room-actions">
+            {% if is_member and session_is_hosting and can_start %}
+                <form method="post" action="{{ url_for('views.start_party', party_id=party.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                    <button type="submit">Lancer la partie</button>
+                </form>
+            {% elif is_member and session_is_hosting and not party.is_started %}
+                <p class="party-action-hint">Il faut au moins {{ game.nb_players_min }} joueurs pour lancer.</p>
+            {% elif not is_member and not is_banned and not party.is_started and member_count < game.nb_players_max %}
+                <form class="party-join-form" method="post" action="{{ url_for('views.join_party', party_id=party.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                    {% if party.password_hash %}
+                        <label for="join-party-password">Mot de passe de la partie</label>
+                        <input id="join-party-password" name="party_password" type="password" maxlength="128" autocomplete="current-password" required>
+                    {% endif %}
+                    <button type="submit">Rejoindre la partie</button>
+                </form>
+            {% elif is_banned %}
+                <p class="party-action-hint">Tu as été exclu de cette partie.</p>
+            {% elif party.is_started %}
+                <p class="party-action-hint">Cette partie a déjà commencé.</p>
+            {% elif not is_member %}
+                <p class="party-action-hint">Ce salon est complet.</p>
+            {% endif %}
+            <a class="party-room-back" href="{{ url_for('views.games') }}">Retour aux jeux</a>
+        </div>
+
+    </section>
+</main>
+{% endblock %}

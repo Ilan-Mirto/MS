@@ -2,6 +2,7 @@ from flask_sqlalchemy import SQLAlchemy
 
 
 db = SQLAlchemy()
+USER_ID_FOREIGN_KEY = "users.id"
 
 
 class User(db.Model):
@@ -34,7 +35,7 @@ class Message(db.Model):
     name = db.Column(db.String(81), nullable=False)
     content = db.Column(db.String(500), nullable=False)
     timestamp = db.Column(db.String(40), nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+    user_id = db.Column(db.Integer, db.ForeignKey(USER_ID_FOREIGN_KEY), nullable=True)
 
 
 # ? Classe de jeu
@@ -46,15 +47,32 @@ class Party(db.Model):
     name = db.Column(db.String(100), nullable=False)
     game_id = db.Column(db.Integer, db.ForeignKey("games.id"), nullable=False)
     created_at = db.Column(db.String(40), nullable=False)
-    host_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    host_id = db.Column(db.Integer, db.ForeignKey(USER_ID_FOREIGN_KEY), nullable=False)
+    password_hash = db.Column(db.String(256), nullable=True)
+    is_started = db.Column(db.Boolean, nullable=False, default=False)
 
-class isConnected(db.Model):
+class PartyMembership(db.Model):
     __tablename__ = "is_connected"
 
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey(USER_ID_FOREIGN_KEY), nullable=False)
     party_id = db.Column(db.Integer, db.ForeignKey("parties.id"), nullable=False)
     connected_at = db.Column(db.String(40), nullable=False)
+
+    __table_args__ = (
+        db.UniqueConstraint("user_id", "party_id", name="uq_party_member"),
+    )
+
+class PartyBan(db.Model):
+    __tablename__ = "party_bans"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey(USER_ID_FOREIGN_KEY), nullable=False)
+    party_id = db.Column(db.Integer, db.ForeignKey("parties.id"), nullable=False)
+
+    __table_args__ = (
+        db.UniqueConstraint("user_id", "party_id", name="uq_party_ban"),
+    )
 
 class Game(db.Model):
     __tablename__ = "games"

@@ -17,26 +17,35 @@
                     <h2>{{ game.name }}</h2>
                     <p>Joueurs : {{ game.nb_players_min }} - {{ game.nb_players_max }}</p>
                 </div>
-                <a class="create-party-button" href="{{ url_for('views.create_party', game_id=game.id) }}">Créer une partie</a>
+                <a class="create-party-button" 
+                   href="{{ url_for('views.create_party', game_id=game.id) }}" 
+                   data-session-is-hosting="{{ session_is_hosting }}">
+                   Créer une partie
+                </a>
             </article>
         {% endfor %}
         </div>
     </section>
     <section class="party-list">
         <h1>Parties disponibles</h1>
-        {% if not party %}
+        {% if not party_cards %}
             <p>Aucune partie disponible pour le moment.</p>
         {% endif %}
-        {% for p in party %}
-            <div class="party" data-relative-game-id="{{ p.game_id }}">
-                <h2>{{ p.name }}</h2>
-                <p>Joueurs : {{ p.nb_players_min }} - {{ p.nb_players_max }}</p>
-                <button class="join-party-button" data-party-id="{{ p.id }}">Rejoindre la partie</button>
-            </div>
+        {% for card in party_cards %}
+            <article class="party" data-relative-game-id="{{ card.party.game_id }}">
+                <div class="party-list-heading">
+                    <h2>{{ card.party.name }}</h2>
+                    {% if card.party.password_hash %}<span class="party-lock" aria-label="Mot de passe requis">Privée</span>{% endif %}
+                </div>
+                <p>{{ card.game.name }} · {{ card.member_count }}/{{ card.game.nb_players_max }} joueurs</p>
+                <p class="party-list-state">{% if card.party.is_started %}Partie lancée{% elif card.member_count >= card.game.nb_players_max %}Partie complète{% else %}En attente{% endif %}</p>
+                <a class="party-list-link" href="{{ url_for('views.view_party', party_id=card.party.id) }}">Ouvrir le salon</a>
+            </article>
         {% endfor %}
     </section>
 </main>
 {% endblock %}
 
 {% block scripts %}
+<script src="{{ url_for('static', filename='js/games.js') }}"></script>
 {% endblock %}

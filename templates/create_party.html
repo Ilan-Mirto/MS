@@ -19,6 +19,7 @@
                     id="party-name"
                     name="party_name"
                     type="text"
+                    value="Partie de {{ creator_name }}"
                     maxlength="100"
                     autocomplete="off"
                     placeholder="Ex. Table du soir"
@@ -26,6 +27,18 @@
                     autofocus
                 >
                 <p class="party-field-hint">100 caractères maximum</p>
+            </div>
+            <div class="party-name-field">
+                <label for="party-password">Mot de passe <span>(facultatif)</span></label>
+                <input
+                    id="party-password"
+                    name="party_password"
+                    type="password"
+                    maxlength="128"
+                    autocomplete="new-password"
+                    placeholder="Laisse vide pour un salon ouvert"
+                >
+                <p class="party-field-hint">Les joueurs devront le saisir pour rejoindre.</p>
             </div>
             <div class="party-create-actions">
                 <a href="{{ url_for('views.games') }}">Annuler</a>
