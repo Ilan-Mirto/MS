@@ -69,6 +69,12 @@
             {% elif not is_member %}
                 <p class="party-action-hint">Ce salon est complet.</p>
             {% endif %}
+            {% if is_member and not session_is_hosting %}
+                <form method="post" action="{{ url_for('views.leave_party', party_id=party.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                    <button class="leave-party-button" type="submit">Quitter la partie</button>
+                </form>
+            {% endif %}
             {% if session_is_hosting %}
                 <form method="post" action="{{ url_for('views.delete_party', party_id=party.id) }}" onsubmit="return confirm('Supprimer définitivement cette partie ?');">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">

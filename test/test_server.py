@@ -213,6 +213,55 @@ class ServerTest(unittest.TestCase):
                 1,
             )
 
+    def test_non_host_can_leave_party_but_host_cannot(self):
+        self.authenticate(self.client, "Alice", "Martin", "motdepasse-a")
+        with self.client.session_transaction() as browser_session:
+            host_csrf = browser_session["csrf_token"]
+        self.client.post(
+            "/create-party?game_id=1",
+            data={"csrf_token": host_csrf, "party_name": "Salon"},
+        )
+        with self.app.app_context():
+            party_id = Party.query.one().id
+
+        guest = self.app.test_client()
+        self.authenticate(guest, "Bob", "Durand", "motdepasse-b")
+        with guest.session_transaction() as browser_session:
+            guest_csrf = browser_session["csrf_token"]
+            guest_id = browser_session["user_id"]
+        guest.post(f"/party/{party_id}/join", data={"csrf_token": guest_csrf})
+
+        guest_page = guest.get(f"/party/{party_id}")
+        self.assertIn(b"Quitter la partie", guest_page.data)
+        host_page = self.client.get(f"/party/{party_id}")
+        self.assertNotIn(b"Quitter la partie", host_page.data)
+
+        host_leave = self.client.post(
+            f"/party/{party_id}/leave",
+            data={"csrf_token": host_csrf},
+            follow_redirects=True,
+        )
+        self.assertIn("L’hôte ne peut pas quitter sa partie.".encode(), host_leave.data)
+
+        left = guest.post(
+            f"/party/{party_id}/leave",
+            data={"csrf_token": guest_csrf},
+            follow_redirects=True,
+        )
+        self.assertIn("Tu as quitté la partie.".encode(), left.data)
+        self.assertEqual(left.request.path, "/games")
+        with self.app.app_context():
+            self.assertEqual(
+                PartyMembership.query.filter_by(
+                    user_id=guest_id, party_id=party_id
+                ).count(),
+                0,
+            )
+            self.assertEqual(
+                PartyBan.query.filter_by(user_id=guest_id, party_id=party_id).count(),
+                0,
+            )
+
     def test_only_host_can_start_after_minimum_players_join(self):
         self.authenticate(self.client, "Alice", "Martin", "motdepasse-a")
         with self.client.session_transaction() as browser_session:

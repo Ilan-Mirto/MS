@@ -218,6 +218,32 @@ def join_party(party_id):
 	return redirect_to_party(party.id)
 
 
+@views.post("/party/<int:party_id>/leave")
+def leave_party(party_id):
+	if not isinstance(session.get("user_id"), int):
+		return redirect(url_for(INDEX_ENDPOINT))
+	party = Party.query.get_or_404(party_id)
+	user_id = session["user_id"]
+	if not valid_csrf_token():
+		flash(FORM_EXPIRED_MESSAGE, "error")
+		return redirect_to_party(party.id)
+	if party.host_id == user_id:
+		flash("L’hôte ne peut pas quitter sa partie.", "error")
+		return redirect_to_party(party.id)
+
+	membership = PartyMembership.query.filter_by(
+		user_id=user_id, party_id=party.id
+	).first()
+	if membership is None:
+		flash("Tu ne fais pas partie de cette partie.", "error")
+		return redirect_to_party(party.id)
+
+	db.session.delete(membership)
+	db.session.commit()
+	flash("Tu as quitté la partie.", "success")
+	return redirect(url_for(GAMES_ENDPOINT))
+
+
 @views.post("/party/<int:party_id>/kick/<int:user_id>")
 def kick_party_member(party_id, user_id):
 	if not isinstance(session.get("user_id"), int):
@@ -379,4 +405,3 @@ def view_party(party_id):
 		session_is_hosting=session_is_hosting,
 		csrf_token=csrf_token()
 	)
-
