@@ -272,6 +272,26 @@ def start_party(party_id):
 	return redirect_to_party(party.id)
 
 
+@views.post("/party/<int:party_id>/delete")
+def delete_party(party_id):
+	if not isinstance(session.get("user_id"), int):
+		return redirect(url_for(INDEX_ENDPOINT))
+	party = Party.query.get_or_404(party_id)
+	if not valid_csrf_token():
+		flash(FORM_EXPIRED_MESSAGE, "error")
+		return redirect_to_party(party.id)
+	if party.host_id != session["user_id"]:
+		flash("Seul l’hôte peut supprimer cette partie.", "error")
+		return redirect_to_party(party.id)
+
+	PartyMembership.query.filter_by(party_id=party.id).delete()
+	PartyBan.query.filter_by(party_id=party.id).delete()
+	db.session.delete(party)
+	db.session.commit()
+	flash("La partie a été supprimée.", "success")
+	return redirect(url_for(GAMES_ENDPOINT))
+
+
 
 @views.route("/create-party", methods=["GET", "POST"])
 def create_party():
@@ -359,5 +379,4 @@ def view_party(party_id):
 		session_is_hosting=session_is_hosting,
 		csrf_token=csrf_token()
 	)
-
 

@@ -69,6 +69,12 @@
             {% elif not is_member %}
                 <p class="party-action-hint">Ce salon est complet.</p>
             {% endif %}
+            {% if session_is_hosting %}
+                <form method="post" action="{{ url_for('views.delete_party', party_id=party.id) }}" onsubmit="return confirm('Supprimer définitivement cette partie ?');">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                    <button class="delete-party-button" type="submit">Supprimer la partie</button>
+                </form>
+            {% endif %}
             <a class="party-room-back" href="{{ url_for('views.games') }}">Retour aux jeux</a>
         </div>
 

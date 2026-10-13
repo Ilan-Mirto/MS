@@ -255,6 +255,63 @@ class ServerTest(unittest.TestCase):
         with self.app.app_context():
             self.assertTrue(db.session.get(Party, party_id).is_started)
 
+    def test_host_can_delete_party_and_non_host_cannot(self):
+        self.authenticate(self.client, "Alice", "Martin", "motdepasse-a")
+        with self.client.session_transaction() as browser_session:
+            host_csrf = browser_session["csrf_token"]
+        self.client.post(
+            "/create-party?game_id=1",
+            data={"csrf_token": host_csrf, "party_name": "Salon à supprimer"},
+        )
+        with self.app.app_context():
+            party_id = Party.query.one().id
+
+        guest = self.app.test_client()
+        self.authenticate(guest, "Bob", "Durand", "motdepasse-b")
+        with guest.session_transaction() as browser_session:
+            guest_csrf = browser_session["csrf_token"]
+            guest_id = browser_session["user_id"]
+        guest.post(
+            f"/party/{party_id}/join",
+            data={"csrf_token": guest_csrf},
+        )
+        self.client.post(
+            f"/party/{party_id}/kick/{guest_id}",
+            data={"csrf_token": host_csrf},
+        )
+
+        party_page = self.client.get(f"/party/{party_id}")
+        self.assertIn(b"Supprimer la partie", party_page.data)
+        guest_page = guest.get(f"/party/{party_id}")
+        self.assertNotIn(b"Supprimer la partie", guest_page.data)
+
+        forbidden = guest.post(
+            f"/party/{party_id}/delete",
+            data={"csrf_token": guest_csrf},
+            follow_redirects=True,
+        )
+        self.assertIn(
+            "Seul l’hôte peut supprimer cette partie.".encode(), forbidden.data
+        )
+        with self.app.app_context():
+            self.assertIsNotNone(db.session.get(Party, party_id))
+
+        deleted = self.client.post(
+            f"/party/{party_id}/delete",
+            data={"csrf_token": host_csrf},
+            follow_redirects=True,
+        )
+        self.assertIn("La partie a été supprimée.".encode(), deleted.data)
+        self.assertEqual(deleted.request.path, "/games")
+        with self.app.app_context():
+            self.assertIsNone(db.session.get(Party, party_id))
+            self.assertEqual(
+                PartyMembership.query.filter_by(party_id=party_id).count(), 0
+            )
+            self.assertEqual(
+                PartyBan.query.filter_by(party_id=party_id).count(), 0
+            )
+
     def test_serves_page_and_accepts_socket_io_connection(self):
         first_browser = self.app.test_client()
         self.authenticate(first_browser, "Alice", "Martin", "motdepasse-a")

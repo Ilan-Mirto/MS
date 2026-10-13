@@ -14,7 +14,7 @@
       <nav>
         <ul>
           <li><a href="{{ url_for('views.index') }}">Accueil</a></li>
-          <li><a href="{{ url_for('views.games') }}">Games</a></li>
+          <li><a href="{{ url_for('views.games') }}">Jeux</a></li>
           {% if session.get('user_id') %}
             <li>
               <form action="{{ url_for('views.logout') }}" method="post">

@@ -642,6 +642,9 @@ label { color: #627168; font-size: 12px; font-weight: 650; }
 
 .kick-member-button:hover { color: #fff; background: #a33c35; }
 
+.delete-party-button { background: #a33c35; }
+.delete-party-button:hover { background: #87382f; }
+
 .party-room-actions {
   display: grid;
   gap: 12px;
