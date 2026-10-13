@@ -14,7 +14,6 @@
         <span>{{ user.full_name }}</span>
         <form action="{{ url_for('views.logout') }}" method="post">
           <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-          <button class="logout-button" type="submit">Déconnexion</button>
         </form>
       </div>
       <output class="connection" id="connection" aria-live="polite">

@@ -19,6 +19,10 @@ def initialize_database():
         user_columns = {
             column["name"] for column in inspect(connection).get_columns("users")
         }
+        if "wins" not in user_columns:
+            connection.execute(
+                text("ALTER TABLE users ADD COLUMN wins INTEGER NOT NULL DEFAULT 0")
+            )
         added_name_keys = False
         if "first_name_key" not in user_columns:
             connection.execute(text("ALTER TABLE users ADD COLUMN first_name_key TEXT"))
@@ -48,6 +52,25 @@ def initialize_database():
         }
         if "user_id" not in message_columns:
             connection.execute(text("ALTER TABLE messages ADD COLUMN user_id INTEGER"))
+
+        # ? Ajout des jeux
+        connection.execute(text("INSERT INTO games (name, imgUrl) VALUES ('ODIN', 'https://example.com/odin.jpg')"))
+
+        # ? Ajout des cartes du jeu ODIN
+                    # Orange, noir, marron, vert, bleu, rose
+        for color in ["FF9000", "171717", "8B4513", "00CC04", "69DDFF", "FFC0CB"]:
+            for number in ["1", "2", "3", "4", "5", "6", "7", "8", "9"]:
+                connection.execute(
+                    text(
+                        "INSERT INTO cards (symbole, symbole_color, bg_color, game_id) "
+                        "VALUES (:symbole, :symbole_color, :bg_color, (SELECT id FROM games WHERE name = 'ODIN'))"
+                    ),
+                    {
+                        "symbole": number,
+                        "symbole_color": "FFFFFF",
+                        "bg_color": color,
+                    },
+                )
 
     USER_NAME_INDEX.create(bind=db.engine, checkfirst=True)
 

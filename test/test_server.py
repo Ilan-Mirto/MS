@@ -134,6 +134,19 @@ class ServerTest(unittest.TestCase):
             self.assertEqual(browser_session["user_id"], first_user_id)
             self.assertEqual(browser_session["user_name"], "Élodie Martin")
 
+    def test_logout_requires_csrf_protected_post(self):
+        self.authenticate(self.client, "Alice", "Martin", "motdepasse-a")
+        with self.client.session_transaction() as browser_session:
+            csrf_token = browser_session["csrf_token"]
+
+        self.assertEqual(self.client.get("/logout").status_code, 405)
+        response = self.client.post(
+            "/logout", data={"csrf_token": csrf_token}
+        )
+        self.assertEqual(response.status_code, 302)
+        with self.client.session_transaction() as browser_session:
+            self.assertNotIn("user_id", browser_session)
+
     def test_migrates_legacy_schema_without_losing_account_or_history(self):
         legacy_database = os.path.join(self.temp_dir.name, "legacy.db")
         with sqlite3.connect(legacy_database) as connection:
@@ -173,6 +186,11 @@ class ServerTest(unittest.TestCase):
         self.authenticate(browser, "élodie", "martin", "motdepasse-a")
         with browser.session_transaction() as browser_session:
             self.assertEqual(browser_session["user_id"], 1)
+        with sqlite3.connect(legacy_database) as connection:
+            self.assertEqual(
+                connection.execute("SELECT wins FROM users WHERE id = 1").fetchone(),
+                (0,),
+            )
 
         socket_client = socketio.test_client(
             migrated_app, flask_test_client=browser

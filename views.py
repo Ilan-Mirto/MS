@@ -130,4 +130,6 @@ def logout():
 def message_history():
 	if not isinstance(session.get("user_id"), int):
 		return redirect(url_for(INDEX_ENDPOINT))
-	return render_template("messages.html", messages=load_messages())
+	return render_template(
+		"messages.html", messages=load_messages(), csrf_token=csrf_token()
+	)
