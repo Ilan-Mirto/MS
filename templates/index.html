@@ -1,48 +1,46 @@
-<!doctype html>
-<html lang="fr">
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="theme-color" content="#f0f4f1">
-    <title>Salon général</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/chat.css') }}">
-  </head>
-  <body>
-    <main class="chat">
-      <header class="chat-header">
-        <div class="brand-mark" aria-hidden="true">SG</div>
-        <div>
-          <p class="eyebrow">DISCUSSION PUBLIQUE</p>
-          <h1>Salon général</h1>
-        </div>
-        <output class="connection" id="connection" aria-live="polite">
-          <span class="connection-dot" aria-hidden="true"></span>
-          <span id="connection-label">Connexion…</span>
-        </output>
-      </header>
+{% extends "base.html" %}
 
-      <ol class="messages" id="messages" aria-label="Messages du salon" aria-live="polite">
-        <li class="empty-state" id="empty-state">
-          <strong>Le salon est calme pour le moment.</strong>
-          <span>Écris le premier message.</span>
-        </li>
-      </ol>
+{% block title %}Salon général{% endblock %}
 
-      <form class="composer" id="message-form">
-        <div class="name-field">
-          <label for="display-name">Ton nom</label>
-          <input id="display-name" name="name" maxlength="24" autocomplete="nickname" placeholder="Anonyme">
-        </div>
-        <div class="send-row">
-          <input id="message-input" name="message" maxlength="500" autocomplete="off" placeholder="Écrire un message…" aria-label="Message" required>
-          <button id="send-button" type="submit" disabled>Envoyer</button>
-          <button id="send-img-button" type="button">Envoyer une image</button>
-        </div>
-      </form>
-    </main>
+{% block content %}
+  <main class="chat">
+    <header class="chat-header">
+      <div class="brand-mark" aria-hidden="true">SG</div>
+      <div>
+        <p class="eyebrow">DISCUSSION PUBLIQUE</p>
+        <h1>Salon général</h1>
+      </div>
+      <div class="account-tools">
+        <span>{{ user.full_name }}</span>
+        <form action="{{ url_for('views.logout') }}" method="post">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <button class="logout-button" type="submit">Déconnexion</button>
+        </form>
+      </div>
+      <output class="connection" id="connection" aria-live="polite">
+        <span class="connection-dot" aria-hidden="true"></span>
+        <span id="connection-label">Connexion…</span>
+      </output>
+    </header>
 
-    <script src="https://cdn.socket.io/4.8.1/socket.io.min.js" integrity="sha384-mkQ3/7FUtcGyoppY6bz/PORYoGqOl7/aSUMn2ymDOJcapfS6PHqxhRTMh1RR0Q6+" crossorigin="anonymous"></script>
-    <script src="https://cdn.socket.io/4.8.1/socket.io.min.js" integrity="sha384-mkQ3/7FUtcGyoppY6bz/PORYoGqOl7/aSUMn2ymDOJcapfS6PHqxhRTMh1RR0Q6+" crossorigin="anonymous"></script>
-    <script src="{{ url_for('static', filename='js/chat.js') }}"></script>
-  </body>
-</html>
+    <ol class="messages" id="messages" data-user-id="{{ user.id }}" aria-label="Messages du salon" aria-live="polite">
+      <li class="empty-state" id="empty-state">
+        <strong>Le salon est calme pour le moment.</strong>
+        <span>Écris le premier message.</span>
+      </li>
+    </ol>
+
+    <form class="composer" id="message-form">
+      <div class="send-row">
+        <input id="message-input" name="message" maxlength="500" autocomplete="off" placeholder="Écrire un message…" aria-label="Message" required>
+        <button id="send-button" type="submit" disabled>Envoyer</button>
+        <button id="send-img-button" type="button" disabled>Envoyer une image</button>
+      </div>
+    </form>
+  </main>
+{% endblock %}
+
+{% block scripts %}
+  <script src="https://cdn.socket.io/4.8.1/socket.io.min.js" integrity="sha384-mkQ3/7FUtcGyoppY6bz/PORYoGqOl7/aSUMn2ymDOJcapfS6PHqxhRTMh1RR0Q6+" crossorigin="anonymous"></script>
+  <script src="{{ url_for('static', filename='js/chat.js') }}"></script>
+{% endblock %}

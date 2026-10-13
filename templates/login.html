@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block title %}Connexion - Salon général{% endblock %}
+
+{% block content %}
+  <main class="login-panel">
+    <p class="eyebrow">SALON GÉNÉRAL</p>
+    <h1>Connexion</h1>
+    {% with messages = get_flashed_messages(category_filter=["error"]) %}
+      {% if messages %}
+        <p class="form-feedback" role="alert">{{ messages[0] }}</p>
+      {% endif %}
+    {% endwith %}
+    <form class="auth-form" method="post">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <div class="auth-field">
+        <label for="first-name">Prénom</label>
+        <input id="first-name" name="first_name" maxlength="40" autocomplete="given-name" required>
+      </div>
+      <div class="auth-field">
+        <label for="last-name">Nom</label>
+        <input id="last-name" name="last_name" maxlength="40" autocomplete="family-name" required>
+      </div>
+      <div class="auth-field">
+        <label for="password">Mot de passe</label>
+        <input id="password" name="password" type="password" minlength="8" maxlength="128" autocomplete="current-password" required>
+      </div>
+      <button type="submit">Créer un compte / Se connecter</button>
+    </form>
+  </main>
+{% endblock %}
