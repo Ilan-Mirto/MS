@@ -1,85 +1,68 @@
 import os
 import secrets
-import sqlite3
 from datetime import datetime, timezone
 
-from flask import Flask, current_app, request, session
+from flask import Flask, request, session
 from flask_socketio import SocketIO
+from sqlalchemy import inspect, text
+from models import Message, USER_NAME_INDEX, User, db
 from views import load_messages, views as views_blueprint
 
 
 socketio = SocketIO(async_mode="threading")
 
 
-def initialize_database(app):
-    database_path = app.config["DATABASE"]
-    os.makedirs(os.path.dirname(os.path.abspath(database_path)), exist_ok=True)
+def initialize_database():
+    db.create_all()
 
-    with sqlite3.connect(database_path) as connection:
-        connection.execute(
-            """CREATE TABLE IF NOT EXISTS users (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                first_name TEXT NOT NULL,
-                last_name TEXT NOT NULL,
-                first_name_key TEXT NOT NULL,
-                last_name_key TEXT NOT NULL,
-                password_hash TEXT NOT NULL,
-                UNIQUE (first_name_key, last_name_key)
-            )"""
-        )
+    with db.engine.begin() as connection:
         user_columns = {
-            column[1] for column in connection.execute("PRAGMA table_info(users)")
+            column["name"] for column in inspect(connection).get_columns("users")
         }
         added_name_keys = False
         if "first_name_key" not in user_columns:
-            connection.execute("ALTER TABLE users ADD COLUMN first_name_key TEXT")
+            connection.execute(text("ALTER TABLE users ADD COLUMN first_name_key TEXT"))
             added_name_keys = True
         if "last_name_key" not in user_columns:
-            connection.execute("ALTER TABLE users ADD COLUMN last_name_key TEXT")
+            connection.execute(text("ALTER TABLE users ADD COLUMN last_name_key TEXT"))
             added_name_keys = True
         if added_name_keys:
             users = connection.execute(
-                "SELECT id, first_name, last_name FROM users"
-            ).fetchall()
-            for user_id, first_name, last_name in users:
+                text("SELECT id, first_name, last_name FROM users")
+            ).mappings()
+            for user in users:
                 connection.execute(
-                    "UPDATE users SET first_name_key = ?, last_name_key = ? "
-                    "WHERE id = ?",
-                    (first_name.casefold(), last_name.casefold(), user_id),
+                    text(
+                        "UPDATE users SET first_name_key = :first_name_key, "
+                        "last_name_key = :last_name_key WHERE id = :user_id"
+                    ),
+                    {
+                        "first_name_key": user["first_name"].casefold(),
+                        "last_name_key": user["last_name"].casefold(),
+                        "user_id": user["id"],
+                    },
                 )
-            connection.execute(
-                "CREATE INDEX IF NOT EXISTS idx_users_name_key "
-                "ON users (first_name_key, last_name_key)"
-            )
-        connection.execute(
-            """CREATE TABLE IF NOT EXISTS messages (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                kind TEXT NOT NULL,
-                name TEXT NOT NULL,
-                content TEXT NOT NULL,
-                timestamp TEXT NOT NULL,
-                user_id INTEGER REFERENCES users(id)
-            )"""
-        )
+
         message_columns = {
-            column[1] for column in connection.execute("PRAGMA table_info(messages)")
+            column["name"] for column in inspect(connection).get_columns("messages")
         }
         if "user_id" not in message_columns:
-            connection.execute("ALTER TABLE messages ADD COLUMN user_id INTEGER")
+            connection.execute(text("ALTER TABLE messages ADD COLUMN user_id INTEGER"))
+
+    USER_NAME_INDEX.create(bind=db.engine, checkfirst=True)
 
 
 def save_message(kind, user_id, name, content, timestamp):
-    connection = sqlite3.connect(current_app.config["DATABASE"])
-    try:
-        cursor = connection.execute(
-            "INSERT INTO messages (kind, name, content, timestamp, user_id) "
-            "VALUES (?, ?, ?, ?, ?)",
-            (kind, name, content, timestamp, user_id),
-        )
-        connection.commit()
-        return cursor.lastrowid
-    finally:
-        connection.close()
+    message = Message(
+        kind=kind,
+        user_id=user_id,
+        name=name,
+        content=content,
+        timestamp=timestamp,
+    )
+    db.session.add(message)
+    db.session.commit()
+    return message.id
 
 
 def authenticated_user():
@@ -175,10 +158,22 @@ def create_app(test_config=None):
     app.config["DATABASE"] = os.environ.get(
         "CHAT_DATABASE", os.path.join(app.instance_path, "chat.db")
     )
+    app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
     if test_config:
         app.config.update(test_config)
 
-    initialize_database(app)
+    if not test_config or "SQLALCHEMY_DATABASE_URI" not in test_config:
+        database_setting = app.config["DATABASE"]
+        if "://" in database_setting:
+            app.config["SQLALCHEMY_DATABASE_URI"] = database_setting
+        else:
+            database_path = os.path.abspath(database_setting)
+            os.makedirs(os.path.dirname(database_path), exist_ok=True)
+            app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{database_path}"
+
+    db.init_app(app)
+    with app.app_context():
+        initialize_database()
 
     app.register_blueprint(views_blueprint)
     socketio.init_app(app)

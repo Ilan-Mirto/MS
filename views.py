@@ -1,10 +1,8 @@
 import hmac
 import secrets
-import sqlite3
 
 from flask import (
 	Blueprint,
-	current_app,
 	flash,
 	redirect,
 	render_template,
@@ -12,7 +10,9 @@ from flask import (
 	session,
 	url_for,
 )
+from sqlalchemy.exc import IntegrityError
 from werkzeug.security import check_password_hash, generate_password_hash
+from models import Message, User, db
 
 
 views = Blueprint("views", __name__)
@@ -20,24 +20,16 @@ INDEX_ENDPOINT = "views.index"
 
 
 def load_messages():
-	connection = sqlite3.connect(current_app.config["DATABASE"])
-	try:
-		rows = connection.execute(
-			"SELECT kind, name, content, timestamp, user_id FROM messages ORDER BY id"
-		).fetchall()
-	finally:
-		connection.close()
-
 	messages = []
-	for kind, name, content, timestamp, user_id in rows:
-		content_key = "text" if kind == "text" else "image_url"
+	for message in Message.query.order_by(Message.id).all():
+		content_key = "text" if message.kind == "text" else "image_url"
 		messages.append(
 			{
-				"type": kind,
-				"name": name,
-				"user_id": user_id,
-				content_key: content,
-				"timestamp": timestamp,
+				"type": message.kind,
+				"name": message.name,
+				"user_id": message.user_id,
+				content_key: message.content,
+				"timestamp": message.timestamp,
 			}
 		)
 	return messages
@@ -60,42 +52,35 @@ def valid_csrf_token():
 def authenticate_or_create(first_name, last_name, password):
 	first_name_key = first_name.casefold()
 	last_name_key = last_name.casefold()
-	connection = sqlite3.connect(current_app.config["DATABASE"])
-	try:
-		users = connection.execute(
-			"SELECT id, first_name, last_name, password_hash FROM users "
-			"WHERE first_name_key = ? AND last_name_key = ?",
-			(first_name_key, last_name_key),
-		).fetchall()
-		for user in users:
-			if check_password_hash(user[3], password):
-				return user[0], user[1], user[2]
-		if users:
-			return None
+	users = User.query.filter_by(
+		first_name_key=first_name_key, last_name_key=last_name_key
+	).all()
+	for user in users:
+		if check_password_hash(user.password_hash, password):
+			return user.id, user.first_name, user.last_name
+	if users:
+		return None
 
-		password_hash = generate_password_hash(password)
-		try:
-			cursor = connection.execute(
-				"INSERT INTO users "
-				"(first_name, last_name, first_name_key, last_name_key, password_hash) "
-				"VALUES (?, ?, ?, ?, ?)",
-				(first_name, last_name, first_name_key, last_name_key, password_hash),
-			)
-			connection.commit()
-			return cursor.lastrowid, first_name, last_name
-		except sqlite3.IntegrityError:
-			connection.rollback()
-			users = connection.execute(
-				"SELECT id, first_name, last_name, password_hash FROM users "
-				"WHERE first_name_key = ? AND last_name_key = ?",
-				(first_name_key, last_name_key),
-			).fetchall()
-			for user in users:
-				if check_password_hash(user[3], password):
-					return user[0], user[1], user[2]
-			return None
-	finally:
-		connection.close()
+	user = User(
+		first_name=first_name,
+		last_name=last_name,
+		first_name_key=first_name_key,
+		last_name_key=last_name_key,
+		password_hash=generate_password_hash(password),
+	)
+	db.session.add(user)
+	try:
+		db.session.commit()
+		return user.id, user.first_name, user.last_name
+	except IntegrityError:
+		db.session.rollback()
+		users = User.query.filter_by(
+			first_name_key=first_name_key, last_name_key=last_name_key
+		).all()
+		for existing_user in users:
+			if check_password_hash(existing_user.password_hash, password):
+				return existing_user.id, existing_user.first_name, existing_user.last_name
+		return None
 
 
 @views.route("/", methods=["GET", "POST"])

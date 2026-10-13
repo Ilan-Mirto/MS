@@ -16,7 +16,7 @@ Application web de discussion publique en temps réel, construite avec Flask et 
 - Annonces de connexion discrètes indiquant le nom complet du nouvel utilisateur.
 - Limites côté serveur : prénom et nom limités à 40 caractères, message texte et URL d’image à 500 caractères.
 
-Les comptes et messages sont enregistrés dans `instance/chat.db` par défaut. Définis `CHAT_DATABASE` pour choisir un autre chemin. En déploiement, définis aussi `CHAT_SECRET_KEY` avec une valeur secrète persistante pour conserver les sessions et protéger leur signature. Les images ne sont pas téléversées ni stockées par l’application ; seule leur URL est conservée, et les navigateurs chargent l’image depuis cette adresse. Le salon et son historique restent publics pour les utilisateurs connectés.
+Les comptes et messages sont gérés avec SQLAlchemy et enregistrés dans `instance/chat.db` (SQLite) par défaut. Définis `CHAT_DATABASE` pour choisir un autre chemin ou fournir une URL de base de données SQLAlchemy. En déploiement, définis aussi `CHAT_SECRET_KEY` avec une valeur secrète persistante pour conserver les sessions et protéger leur signature. Les images ne sont pas téléversées ni stockées par l’application ; seule leur URL est conservée, et les navigateurs chargent l’image depuis cette adresse. Le salon et son historique restent publics pour les utilisateurs connectés.
 
 ## Prérequis
 
@@ -62,6 +62,7 @@ La configuration utilise un seul worker. Sur Render, le système de fichiers par
 ```text
 .
 ├── server.py             # Application Flask et événements Socket.IO
+├── models.py             # Modèles SQLAlchemy et extension de base de données
 ├── views.py              # Routes du salon, de connexion et de l'historique
 ├── templates/
 │   ├── base.html          # Structure HTML commune
