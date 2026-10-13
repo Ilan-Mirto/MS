@@ -146,4 +146,33 @@ def games():
 		"games.html", games=games, party=party, csrf_token=csrf_token()
 	)
 
+@views.route("/create-party", methods=["GET", "POST"])
+def create_party():
+	if not isinstance(session.get("user_id"), int):
+		return redirect(url_for(INDEX_ENDPOINT))
+	
 
+	host_id = session.get("user_id")
+	game_id = request.args.get("game_id", type=int)
+	if not game_id:
+		flash("Jeu invalide.", "error")
+		return redirect(url_for("games"))
+
+	if request.method == "POST":
+		party_name = request.form.get("party_name", "").strip()[:100]
+		if not party_name:
+			flash("Nom de la partie requis.", "error")
+			return redirect(url_for("games"))
+
+		new_party = Party(
+			name=party_name,
+			game_id=game_id,
+			created_at=datetime.utcnow().isoformat(),
+			host_id=host_id,
+		)
+		db.session.add(new_party)
+		db.session.commit()
+		flash("Partie créée avec succès.", "success")
+		return redirect(url_for("games"))
+
+	return render_template("create_party.html", game_id=game_id, csrf_token=csrf_token())

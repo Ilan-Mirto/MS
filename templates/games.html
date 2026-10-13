@@ -17,7 +17,7 @@
                     <h2>{{ game.name }}</h2>
                     <p>Joueurs : {{ game.nb_players_min }} - {{ game.nb_players_max }}</p>
                 </div>
-                <button class="create-party-button" data-game-id="{{ game.id }}">Créer une partie</button>
+                <a class="create-party-button" href="{{ url_for('views.create_party', game_id=game.id) }}">Créer une partie</a>
             </article>
         {% endfor %}
         </div>

@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block title %}Créer une partie{% endblock %}
+
+{% block content %}
+<main class="party-create-page">
+    <section class="party-create-intro" aria-labelledby="party-create-title">
+        <p class="eyebrow">ESPACE DE JEU</p>
+        <h1 id="party-create-title">Créer une partie</h1>
+        <p>Choisis un nom pour ta table. Les autres joueurs pourront ensuite la rejoindre.</p>
+    </section>
+
+    <section class="party-create-panel" aria-label="Détails de la partie">
+        <form class="party-create-form" method="post" action="{{ url_for('views.create_party', game_id=game_id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <div class="party-name-field">
+                <label for="party-name">Nom de la partie</label>
+                <input
+                    id="party-name"
+                    name="party_name"
+                    type="text"
+                    maxlength="100"
+                    autocomplete="off"
+                    placeholder="Ex. Table du soir"
+                    required
+                    autofocus
+                >
+                <p class="party-field-hint">100 caractères maximum</p>
+            </div>
+            <div class="party-create-actions">
+                <a href="{{ url_for('views.games') }}">Annuler</a>
+                <button type="submit">Créer la partie</button>
+            </div>
+        </form>
+    </section>
+</main>
+{% endblock %}

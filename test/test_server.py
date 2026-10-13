@@ -200,6 +200,39 @@ class ServerTest(unittest.TestCase):
         self.assertEqual(history[0]["name"], "Élodie Martin")
         socket_client.disconnect()
 
+    def test_migrates_legacy_parties_without_losing_them(self):
+        legacy_database = os.path.join(self.temp_dir.name, "legacy_parties.db")
+        with sqlite3.connect(legacy_database) as connection:
+            connection.execute(
+                """CREATE TABLE parties (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name TEXT NOT NULL,
+                    game_id INTEGER NOT NULL,
+                    created_at TEXT NOT NULL
+                )"""
+            )
+            connection.execute(
+                "INSERT INTO parties (name, game_id, created_at) VALUES (?, ?, ?)",
+                ("Ancienne partie", 1, "2026-01-01T10:00:00"),
+            )
+
+        migrated_app = create_app(
+            {"TESTING": True, "DATABASE": legacy_database}
+        )
+        browser = migrated_app.test_client()
+        self.authenticate(browser, "Alice", "Martin", "motdepasse-a")
+
+        response = browser.get("/games")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"Ancienne partie", response.data)
+        with sqlite3.connect(legacy_database) as connection:
+            self.assertIsNone(
+                connection.execute(
+                    "SELECT host_id FROM parties WHERE id = 1"
+                ).fetchone()[0]
+            )
+
     def test_rejects_socket_connections_without_an_authenticated_session(self):
         unauthenticated_client = socketio.test_client(
             self.app, flask_test_client=self.client

@@ -53,6 +53,13 @@ def initialize_database():
         if "user_id" not in message_columns:
             connection.execute(text("ALTER TABLE messages ADD COLUMN user_id INTEGER"))
 
+        party_columns = {
+            column["name"] for column in inspect(connection).get_columns("parties")
+        }
+        if "host_id" not in party_columns:
+            connection.execute(
+                text("ALTER TABLE parties ADD COLUMN host_id INTEGER REFERENCES users(id)")
+            )
 
         # ? Supprimer tous les jeu précédents
         connection.execute(text("DELETE FROM games"))
