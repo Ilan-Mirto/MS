@@ -37,6 +37,19 @@ body {
   border-bottom: 1px solid #e8eeea;
 }
 
+.account-tools {
+  display: grid;
+  justify-items: end;
+  gap: 5px;
+  margin-left: auto;
+  color: #627168;
+  font-size: 12px;
+}
+
+.account-tools form { margin: 0; }
+.logout-button { min-width: 0; padding: 0; color: #627168; background: transparent; font-size: 12px; text-decoration: underline; }
+.logout-button:hover { color: #202d28; background: transparent; }
+
 .brand-mark {
   display: grid;
   flex: 0 0 42px;
@@ -101,6 +114,23 @@ h1 { margin: 0; font-size: 19px; font-weight: 650; }
   overflow-wrap: anywhere;
 }
 
+.system-message {
+  display: flex;
+  align-items: center;
+  align-self: stretch;
+  gap: 10px;
+  color: #849087;
+  font-size: 12px;
+  text-align: center;
+}
+
+.system-message::before, .system-message::after {
+  height: 1px;
+  flex: 1;
+  background: #edf1ee;
+  content: "";
+}
+
 .message.own {
   align-self: flex-end;
   background: #e2f2e8;
@@ -126,8 +156,23 @@ h1 { margin: 0; font-size: 19px; font-weight: 650; }
   border-top: 1px solid #e8eeea;
 }
 
-.name-field { display: grid; gap: 5px; width: min(100%, 220px); }
 label { color: #627168; font-size: 12px; font-weight: 650; }
+
+.login-panel {
+  width: min(100%, 420px);
+  margin: max(8vh, 36px) auto;
+  padding: 28px;
+  background: #fff;
+  border: 1px solid #dce5df;
+  border-radius: 8px;
+  box-shadow: 0 18px 50px #24382c14;
+}
+
+.login-panel h1 { margin: 0 0 22px; }
+.auth-form { display: grid; gap: 16px; }
+.auth-field { display: grid; gap: 6px; }
+.auth-form button { min-height: 42px; }
+.form-feedback { margin: 0 0 16px; color: #a33c35; font-size: 13px; }
 
 input {
   min-width: 0;
@@ -163,9 +208,30 @@ button:disabled { background: #9aa9a0; cursor: not-allowed; }
 
 @media (max-width: 520px) {
   body { padding: 0; background: #fff; }
-  .chat { width: 100%; height: 100dvh; min-height: 420px; border: 0; border-radius: 0; }
-  .chat-header { padding: 16px; }
+  .chat {
+    grid-template-columns: minmax(0, 1fr);
+    width: 100%;
+    height: 100dvh;
+    min-height: 420px;
+    border: 0;
+    border-radius: 0;
+  }
+  .chat-header {
+    display: grid;
+    grid-template-columns: 42px minmax(0, 1fr) auto;
+    gap: 10px;
+    width: 100%;
+    min-width: 0;
+    padding: 12px 16px;
+  }
+  .chat-header > div:nth-child(2) { min-width: 0; }
+  .chat-header h1 { font-size: 17px; }
+  .chat-header h1 a { display: block; margin-top: 3px; font-size: 12px; }
+  .brand-mark { grid-row: 1 / 3; }
+  .account-tools { grid-column: 3; grid-row: 1; font-size: 11px; }
+  .connection { grid-column: 2; grid-row: 2; margin-left: 0; }
   .messages { padding: 18px 16px; }
   .composer { padding: 13px 16px max(16px, env(safe-area-inset-bottom)); }
   button { min-width: 88px; padding: 0 12px; }
+  .login-panel { margin: 24px 16px; width: auto; }
 }
