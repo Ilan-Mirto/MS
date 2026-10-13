@@ -46,6 +46,7 @@ class Party(db.Model):
     name = db.Column(db.String(100), nullable=False)
     game_id = db.Column(db.Integer, db.ForeignKey("games.id"), nullable=False)
     created_at = db.Column(db.String(40), nullable=False)
+    host_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
 
 class isConnected(db.Model):
     __tablename__ = "is_connected"
@@ -61,6 +62,8 @@ class Game(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
     imgUrl = db.Column(db.String(500), nullable=True)
+    nb_players_min = db.Column(db.Integer, nullable=False)
+    nb_players_max = db.Column(db.Integer, nullable=False)
 
 class Card(db.Model):
     __tablename__ = "cards"

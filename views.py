@@ -12,7 +12,7 @@ from flask import (
 )
 from sqlalchemy.exc import IntegrityError
 from werkzeug.security import check_password_hash, generate_password_hash
-from models import Message, User, db
+from models import Message, User, db, Game, Party
 
 
 views = Blueprint("views", __name__)
@@ -133,3 +133,17 @@ def message_history():
 	return render_template(
 		"messages.html", messages=load_messages(), csrf_token=csrf_token()
 	)
+
+@views.get("/games")
+def games():
+	if not isinstance(session.get("user_id"), int):
+		return redirect(url_for(INDEX_ENDPOINT))
+
+	games = Game.query.all()
+	party = Party.query.all()
+
+	return render_template(
+		"games.html", games=games, party=party, csrf_token=csrf_token()
+	)
+
+

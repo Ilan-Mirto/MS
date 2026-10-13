@@ -53,8 +53,15 @@ def initialize_database():
         if "user_id" not in message_columns:
             connection.execute(text("ALTER TABLE messages ADD COLUMN user_id INTEGER"))
 
+
+        # ? Supprimer tous les jeu précédents
+        connection.execute(text("DELETE FROM games"))
+
+        # ? Supprimer toutes les cartes précédentes
+        connection.execute(text("DELETE FROM cards"))
+
         # ? Ajout des jeux
-        connection.execute(text("INSERT INTO games (name, imgUrl) VALUES ('ODIN', 'https://example.com/odin.jpg')"))
+        connection.execute(text("INSERT INTO games (name, imgUrl, nb_players_min, nb_players_max) VALUES ('ODIN', 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQLveQe1YezWLVLZZamq0y1rYKTx32P7nnz1QT-3Z1D-m9Y9Cfd22ngf-E&s=10', 2, 6)"))
 
         # ? Ajout des cartes du jeu ODIN
                     # Orange, noir, marron, vert, bleu, rose

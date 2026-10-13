@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block title %}Salon général{% endblock %}
+
+{% block content %}
+<main class="games">
+    <section class="games-list">
+        <h1>Jeux disponibles</h1>
+        {% if not games %}
+            <p>Aucun jeu disponible pour le moment.</p>
+        {% endif %}
+        <div class="game-grid">
+        {% for game in games %}
+            <article class="game-card">
+                <div class="game">
+                    <img src="{{ game.imgUrl }}" alt="{{ game.name }}">
+                    <h2>{{ game.name }}</h2>
+                    <p>Joueurs : {{ game.nb_players_min }} - {{ game.nb_players_max }}</p>
+                </div>
+                <button class="create-party-button" data-game-id="{{ game.id }}">Créer une partie</button>
+            </article>
+        {% endfor %}
+        </div>
+    </section>
+    <section class="party-list">
+        <h1>Parties disponibles</h1>
+        {% if not party %}
+            <p>Aucune partie disponible pour le moment.</p>
+        {% endif %}
+        {% for p in party %}
+            <div class="party" data-relative-game-id="{{ p.game_id }}">
+                <h2>{{ p.name }}</h2>
+                <p>Joueurs : {{ p.nb_players_min }} - {{ p.nb_players_max }}</p>
+                <button class="join-party-button" data-party-id="{{ p.id }}">Rejoindre la partie</button>
+            </div>
+        {% endfor %}
+    </section>
+</main>
+{% endblock %}
+
+{% block scripts %}
+{% endblock %}

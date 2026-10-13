@@ -236,6 +236,117 @@ label { color: #627168; font-size: 12px; font-weight: 650; }
 .auth-form button { min-height: 42px; }
 .form-feedback { margin: 0 0 16px; color: #a33c35; font-size: 13px; }
 
+.games {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(250px, 0.85fr);
+  align-items: start;
+  gap: 32px;
+  width: min(100%, 1120px);
+  margin: 0 auto;
+}
+
+.games > section { min-width: 0; }
+
+.games > section > h1 {
+  margin: 0 0 20px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #d5dfd8;
+  font-size: 23px;
+}
+
+.games-list {
+  display: block;
+}
+
+.game-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 250px), 1fr));
+  align-content: start;
+  gap: 18px;
+}
+
+.game-card {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  overflow: hidden;
+  background: #fff;
+  border: 1px solid #dce5df;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px #24382c0d;
+}
+
+.game {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.game img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  background: #e8efea;
+}
+
+.game h2 {
+  margin: 0;
+  padding: 15px 16px 6px;
+  font-size: 17px;
+}
+
+.game p {
+  margin: 0;
+  padding: 0 16px 18px;
+  color: #627168;
+  font-size: 13px;
+}
+
+.games-list > p,
+.party-list > p {
+  color: #627168;
+  font-size: 14px;
+}
+
+.create-party-button {
+  width: calc(100% - 28px);
+  min-height: 42px;
+  margin: 0 14px 14px;
+}
+
+.party-list {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+}
+
+.party-list > h1 { grid-column: 1 / -1; }
+
+.party {
+  padding: 14px 16px;
+  background: #fff;
+  border: 1px solid #dce5df;
+  border-left: 3px solid #247653;
+  border-radius: 5px;
+}
+
+.party h2 {
+  margin: 0 0 5px;
+  font-size: 16px;
+}
+
+.party p {
+  margin: 0;
+  color: #627168;
+  font-size: 13px;
+}
+
+.party .join-party-button {
+  width: 100%;
+  margin-top: 14px;
+}
+
 input {
   min-width: 0;
   height: 42px;
@@ -307,4 +418,11 @@ button:disabled { background: #9aa9a0; cursor: not-allowed; }
   .composer { padding: 13px 16px max(16px, env(safe-area-inset-bottom)); }
   button { min-width: 88px; padding: 0 12px; }
   .login-panel { margin: 24px 16px; width: auto; }
+}
+
+@media (max-width: 760px) {
+  .games {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 30px;
+  }
 }
