@@ -5,10 +5,13 @@ Application web de discussion publique en temps réel, construite avec Flask et 
 ## Fonctionnalités
 
 - Interface de chat en français, avec indicateur de connexion.
-- Création automatique d'un compte à la première connexion ; mots de passe stockés sous forme hachée.
+- Création automatique d'un compte à la première connexion ; reconnexion avec le même prénom, nom et mot de passe. La casse du prénom et du nom n'est pas prise en compte.
+- Mots de passe de 8 à 128 caractères, stockés sous forme hachée.
 - Session obligatoire pour accéder au salon, à son historique public et aux événements Socket.IO.
+- Déconnexion avec invalidation de la session.
 - Diffusion en temps réel des messages à tous les clients connectés.
 - Historique public des messages texte et des URLs d’images conservé dans une base SQLite et rechargé à la connexion.
+- Page d'historique accessible aux utilisateurs connectés à l'adresse `/messages`.
 - Partage d’images à partir d’une URL, via le bouton « Envoyer une image ».
 - Annonces de connexion discrètes indiquant le nom complet du nouvel utilisateur.
 - Limites côté serveur : prénom et nom limités à 40 caractères, message texte et URL d’image à 500 caractères.
@@ -59,15 +62,19 @@ La configuration utilise un seul worker. Sur Render, le système de fichiers par
 ```text
 .
 ├── server.py             # Application Flask et événements Socket.IO
+├── views.py              # Routes du salon, de connexion et de l'historique
 ├── templates/
-│   └── index.html        # Page du salon
+│   ├── base.html          # Structure HTML commune
+│   ├── index.html         # Page du salon
+│   ├── login.html         # Création de compte et connexion
+│   └── messages.html      # Historique public
 ├── static/
-│   ├── css/chat.css      # Styles de l’interface
-│   └── js/chat.js        # Connexion et interactions du chat
+│   ├── css/chat.css       # Styles de l’interface
+│   └── js/chat.js         # Connexion et interactions du chat
 ├── instance/
 │   └── chat.db           # Base SQLite créée au premier lancement
 ├── test/
 │   └── test_server.py    # Tests du serveur
 ├── requirements.txt      # Dépendances Python
-└── render.yaml           # Configuration de déploiement Render
+└── render.yaml            # Configuration de déploiement Render
 ```
