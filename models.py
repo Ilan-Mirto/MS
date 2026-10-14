@@ -87,7 +87,25 @@ class Card(db.Model):
     __tablename__ = "cards"
 
     id = db.Column(db.Integer, primary_key=True)
-    symbole = db.Column(db.String(5), nullable=False)
-    symbole_color = db.Column(db.String(20), nullable=False)
+    symbole = db.Column(db.String(500), nullable=False)
     bg_color = db.Column(db.String(20), nullable=False)
+    bg_img = db.Column(db.String(500), nullable=True)
     game_id = db.Column(db.Integer, db.ForeignKey("games.id"), nullable=False)
+    groups = db.relationship(
+        "CardGroup", backref="card", cascade="all, delete-orphan", lazy="select"
+    )
+
+
+class CardGroup(db.Model):
+    """A named group a card belongs to (e.g. name="couleur", value="FF9000")."""
+
+    __tablename__ = "card_groups"
+
+    id = db.Column(db.Integer, primary_key=True)
+    card_id = db.Column(db.Integer, db.ForeignKey("cards.id"), nullable=False)
+    name = db.Column(db.String(50), nullable=False)
+    value = db.Column(db.String(100), nullable=False)
+
+    __table_args__ = (
+        db.UniqueConstraint("card_id", "name", name="uq_card_group_name"),
+    )

@@ -318,7 +318,6 @@ def delete_party(party_id):
 	return redirect(url_for(GAMES_ENDPOINT))
 
 
-
 @views.route("/create-party", methods=["GET", "POST"])
 def create_party():
 	if not isinstance(session.get("user_id"), int):

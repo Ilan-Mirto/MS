@@ -56,25 +56,38 @@ def _seed_default_game_and_cards(connection):
         )
 
     cards_exist = connection.execute(text("SELECT 1 FROM cards LIMIT 1")).first()
-    if cards_exist:
+    groups_exist = connection.execute(
+        text("SELECT 1 FROM card_groups LIMIT 1")
+    ).first()
+    if cards_exist and groups_exist:
         return
+    # Legacy cards have no groups (colour was not stored): reseed them.
+    connection.execute(text("DELETE FROM cards"))
     game_id = connection.execute(
         text("SELECT id FROM games WHERE name = 'ODIN' LIMIT 1")
     ).scalar_one()
     for color in ["FF9000", "171717", "8B4513", "00CC04", "69DDFF", "FFC0CB"]:
         for number in ["1", "2", "3", "4", "5", "6", "7", "8", "9"]:
-            connection.execute(
+            card_id = connection.execute(
                 text(
-                    "INSERT INTO cards (symbole, symbole_color, bg_color, game_id) "
-                    "VALUES (:symbole, :symbole_color, :bg_color, :game_id)"
+                    "INSERT INTO cards (symbole, bg_color, bg_img, game_id) "
+                    "VALUES (:symbole, :bg_color, :bg_img, :game_id)"
                 ),
                 {
                     "symbole": number,
-                    "symbole_color": "FFFFFF",
-                    "bg_color": color,
+                    "bg_color": "FFFFFF",
+                    "bg_img": f"ODIN/vikings/viking_{number}.svg",
                     "game_id": game_id,
                 },
-            )
+            ).lastrowid
+            for group_name, group_value in (("couleur", color), ("nombre", number)):
+                connection.execute(
+                    text(
+                        "INSERT INTO card_groups (card_id, name, value) "
+                        "VALUES (:card_id, :name, :value)"
+                    ),
+                    {"card_id": card_id, "name": group_name, "value": group_value},
+                )
 
 
 def initialize_database():
